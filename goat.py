@@ -10,6 +10,7 @@ class Lab:
         self.b  = 0  # Coefficient b
         self.sa = 0  # Uncertainty in a
         self.sb = 0  # Uncertainty in b 
+        self.least = False
         
         # Retrieve file names from keyword arguments
         m_file = kwargs.get('file', None)
@@ -67,6 +68,7 @@ class Lab:
         return ans 
     
     def least_square(self, check=False, dy_dx=0):
+        self.least = True
         # Perform least squares fitting on the data
         data = self.m_data
         n = data.shape[0]  # Number of data points
@@ -178,6 +180,7 @@ class Lab:
             fx = sp.log(x) * self.a + self.b
         elif log_y:
             fx = sp.exp(x * self.a + self.b)
+            print('hello')
         else:
             fx = self.a * x + self.b
 
@@ -191,25 +194,27 @@ class Lab:
             else:
                 plt.errorbar(data[i][0], data[i][2], xerr=data[i][1], yerr=data[i][3], fmt='o', 
                              ecolor='red', color='k', capsize=2)
-                             
-        # Prepare x values for the fitted line
-        xmin = np.min(data[:, 0])  # Minimum x value
-        xmax = np.max(data[:, 0])  # Maximum x value
+        
+        if (self.least):
 
-        xs = np.linspace(xmin * 0.8, xmax * 1.2, 100)  # Generate x values for the fit line
-        plt.plot(xs, f(xs), color=col, label='Best Fit')  # Plot the fitted line
+            # Prepare x values for the fitted line
+            xmin = np.min(data[:, 0])  # Minimum x value
+            xmax = np.max(data[:, 0])  # Maximum x value
 
-        # Labeling the axes and title
-        plt.xlabel(f'${x_axis}$')
-        plt.ylabel(f'${y_axis}$')
-        plt.title(f'${title}$')
+            xs = np.linspace(xmin * 0.8, xmax * 1.2, 100)  # Generate x values for the fit line
+            plt.plot(xs, f(xs), color=col, label='Best Fit')  # Plot the fitted line
 
-        # Add text annotation to the plot for coefficients
-        plt.text(0.05, 0.95, f"$a = {self.a:.4f} \pm {self.sa:.4f}$\n"
-                            f"$b = {self.b:.4f} \pm {self.sb:.4f}$\n"
-                            f"Equation: $y = {sp.latex(fx)}$",
-                transform=plt.gca().transAxes,
-                fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
+            # Labeling the axes and title
+            plt.xlabel(f'${x_axis}$')
+            plt.ylabel(f'${y_axis}$')
+            plt.title(f'${title}$')
+
+            # Add text annotation to the plot for coefficients
+            plt.text(0.05, 0.95, f"$a = {self.a:.4f} \pm {self.sa:.4f}$\n"
+                                f"$b = {self.b:.4f} \pm {self.sb:.4f}$\n"
+                                f"Equation: $y = {sp.latex(fx)}$",
+                    transform=plt.gca().transAxes,
+                    fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
 
         # Handle logarithmic axes if specified
         if log:
@@ -224,33 +229,37 @@ class Lab:
         plt.show()  # Display the plot
         plt.savefig('plot_of_least_squares.pdf')  # Save the plot as PDF
 
-    def transform(self):
+    def revert(self):
         # Dummy transform function (currently does nothing)
         data = self.m_data
         for i in range(data.shape[0]):
             data[i][0] = data[i][0]  # No operation
             data[i][1] = data[i][1]  # No operation
-            data[i][2] = data[i][2]  # No operation
-            data[i][3] = data[i][3]  # No operation
+            data[i][3] = data[i][3]*np.exp(data[i][2])  # No operation
+            data[i][2] = np.exp(data[i][2])  # No operation
 
-    def revert(self):
+    def transform(self):
         # Dummy revert function (currently does nothing)
         data = self.m_data
         for i in range(data.shape[0]):
             data[i][0] = data[i][0]  # No operation
             data[i][1] = data[i][1]  # No operation
-            data[i][2] = data[i][2]  # No operation
-            data[i][3] = data[i][3]  # No operation
-        
+            data[i][3] = data[i][3]/data[i][2]  # No operation
+            data[i][2] = np.log(data[i][2])  # No operation
+
 
 def main():
     # Example usage of the Lab class
     a = Lab(file='test.txt')  # Create an instance of Lab, reading data from 'test.txt'
     print(a)  # Print the instance data
+    #a.transform()
     a.least_square()  # Perform least squares fitting
-    # a.show()  # (Commented out) Call to show the plot
+    a.show(x_axis = "I  (mA)", y_axis = "V   (v)" , title = "V (I)")  # Show the fitted data and curve
     a.least_square(True, a.a)  # Perform least squares fitting with uncertainty check
-    a.show()  # Show the fitted data and curve
+    #a.revert()
+    a.sa = 0.00231
+    a.show(x_axis = "I  (mA)", y_axis = "V   (v)" , title = "V (I)")  # Show the fitted data and curve
+
 
 if __name__ == '__main__':
     main()  # Execute the main function
